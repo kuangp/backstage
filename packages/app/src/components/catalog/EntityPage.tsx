@@ -104,6 +104,7 @@ import {
   EntityPagerDutyCard,
   isPagerDutyAvailable,
 } from '@backstage/plugin-pagerduty';
+import { EntityPlaylistDialog } from '@backstage/plugin-playlist';
 import {
   EntityRollbarContent,
   isRollbarAvailable,
@@ -113,6 +114,7 @@ import { EntityTechdocsContent } from '@backstage/plugin-techdocs';
 import { EntityTodoContent } from '@backstage/plugin-todo';
 import { Button, Grid } from '@material-ui/core';
 import BadgeIcon from '@material-ui/icons/CallToAction';
+import PlaylistAddIcon from '@material-ui/icons/PlaylistAdd';
 
 import {
   EntityGithubInsightsContent,
@@ -154,6 +156,7 @@ const customEntityFilterKind = ['Component', 'API', 'System'];
 
 const EntityLayoutWrapper = (props: { children?: ReactNode }) => {
   const [badgesDialogOpen, setBadgesDialogOpen] = useState(false);
+  const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
 
   const extraMenuItems = useMemo(() => {
     return [
@@ -161,6 +164,11 @@ const EntityLayoutWrapper = (props: { children?: ReactNode }) => {
         title: 'Badges',
         Icon: BadgeIcon,
         onClick: () => setBadgesDialogOpen(true),
+      },
+      {
+        title: 'Add to playlist',
+        Icon: PlaylistAddIcon,
+        onClick: () => setPlaylistDialogOpen(true),
       },
     ];
   }, []);
@@ -178,6 +186,10 @@ const EntityLayoutWrapper = (props: { children?: ReactNode }) => {
       <EntityBadgesDialog
         open={badgesDialogOpen}
         onClose={() => setBadgesDialogOpen(false)}
+      />
+      <EntityPlaylistDialog
+        open={playlistDialogOpen}
+        onClose={() => setPlaylistDialogOpen(false)}
       />
     </>
   );

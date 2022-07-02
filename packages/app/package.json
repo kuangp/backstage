@@ -45,6 +45,7 @@
     "@backstage/plugin-org": "^0.5.8-next.0",
     "@backstage/plugin-pagerduty": "0.5.1-next.0",
     "@backstage/plugin-permission-react": "^0.4.4-next.0",
+    "@backstage/plugin-playlist": "^0.0.0",
     "@backstage/plugin-rollbar": "^0.4.8-next.0",
     "@backstage/plugin-scaffolder": "^1.4.1-next.0",
     "@backstage/plugin-search": "^1.0.1-next.0",
