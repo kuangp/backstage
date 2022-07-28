@@ -101,11 +101,12 @@ export const AddEntitiesDrawer = ({
   const catalogApi = useApi(catalogApiRef);
   const entityRoute = useRouteRef(entityRouteRef);
   const entityLocationRegex = useMemo(() => {
+    const forwardSlashRegex = new RegExp('/', 'g');
     const locationRegex = entityRoute({
       namespace: '(?<namespace>.+?)',
       kind: '(?<kind>.+?)',
       name: '(?<name>.+?)',
-    }).replace(/\//g, '\\/');
+    }).replace(forwardSlashRegex, '\\/');
 
     return new RegExp(`${locationRegex}$`);
   }, [entityRoute]);
