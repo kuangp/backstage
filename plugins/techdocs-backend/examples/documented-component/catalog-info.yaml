@@ -1,8 +1,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: documented-component
-  title: Documented Component
+  name: documented-component-2
+  title: Documented Component 2
   description: A Service with TechDocs documentation
   annotations:
     backstage.io/techdocs-ref: dir:.
