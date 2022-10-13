@@ -3,7 +3,7 @@
 This is a basic example of documentation. It is intended as a showcase of some of the
 features that TechDocs provides out of the box.
 
-[test catalog link](http://localhost:3000/catalog?filters%5Bkind%5D=component&filters%5Buser%5D=all&filters%5Btags%5D=website)
+[test catalog link](/catalog?filters%5Bkind%5D=component&filters%5Buser%5D=all&filters%5Btags%5D=website)
 
 You can see also:
 
