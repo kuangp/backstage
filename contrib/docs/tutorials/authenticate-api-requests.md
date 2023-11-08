@@ -8,6 +8,7 @@ API requests from frontend plugins include an authorization header with a Backst
 
 As techdocs HTML pages load assets without an Authorization header the code below also sets a token cookie when the user logs in (and when the token is about to expire).
 
+## Old Backend System Setup
 Create `packages/backend/src/authMiddleware.ts`:
 
 ```typescript
@@ -121,6 +122,137 @@ async function main() {
   // ...
 }
 ```
+
+## New Backend System Setup
+Create `packages/backend/src/authMiddlewareFactory.ts`:
+
+```typescript
+import { HostDiscovery } from '@backstage/backend-app-api';
+import { ServerTokenManager } from '@backstage/backend-common';
+import { RootConfigService } from '@backstage/backend-plugin-api';
+import {
+  DefaultIdentityClient,
+  getBearerTokenFromAuthorizationHeader,
+} from '@backstage/plugin-auth-node';
+import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { decodeJwt } from 'jose';
+import lzstring from 'lz-string';
+import { URL } from 'url';
+
+type AuthMiddlewareFactoryOptions = {
+  config: RootConfigService;
+};
+
+export const authMiddlewareFactory = ({
+  config,
+}: AuthMiddlewareFactoryOptions): RequestHandler => {
+  const baseUrl = config.getString('backend.baseUrl');
+  const discovery = HostDiscovery.fromConfig(config);
+  const identity = DefaultIdentityClient.create({ discovery });
+  const tokenManager = ServerTokenManager.fromConfig(config, { logger });
+
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const fullPath = `${req.baseUrl}${req.path}`;
+
+    // Only apply auth to /api routes & skip auth for the following endpoints
+    // Add any additional plugin routes you want to whitelist eg. events
+    const nonAuthWhitelist = [
+      'app',
+      'auth',
+    ];
+    const nonAuthRegex = new RegExp(
+      `^\/api\/(${nonAuthWhitelist.join('|')})(?=\/|$)\S*`,
+    );
+    if (!fullPath.startsWith('/api/') || nonAuthRegex.test(fullPath)) {
+      next();
+      return;
+    }
+
+    try {
+      // Token cookies are compressed to reduce size
+      const cookieToken = lzstring.decompressFromEncodedURIComponent(
+        req.cookies.token,
+      );
+      const token =
+        getBearerTokenFromAuthorizationHeader(req.headers.authorization) ??
+        cookieToken;
+
+      try {
+        // Attempt to authenticate as a frontend request token
+        await identity.authenticate(token);
+      } catch (err) {
+        // Attempt to authenticate as a backend request token
+        await tokenManager.authenticate(token);
+      }
+
+      if (!req.headers.authorization) {
+        // Authorization header may be forwarded by plugin requests
+        req.headers.authorization = `Bearer ${token}`;
+      }
+
+      if (token !== cookieToken) {
+        try {
+          const payload = decodeJwt(token);
+          res.cookie('token', token, {
+            // Compress token to reduce cookie size
+            encode: lzstring.compressToEncodedURIComponent,
+            expires: new Date((payload?.exp ?? 0) * 1000),
+            secure: baseUrl.startsWith('https://'),
+            sameSite: 'lax',
+            domain: new URL(baseUrl).hostname,
+            path: '/',
+            httpOnly: true,
+          });
+        } catch {
+          // Ignore
+        }
+      }
+      next();
+    } catch {
+      res.status(401).send(`Unauthorized`);
+    }
+  };
+};
+```
+
+Install cookie-parser:
+
+```bash
+# From your Backstage root directory
+yarn add --cwd packages/backend cookie-parser
+```
+
+Create a custom configured `rootHttpRouterService` in `packages/backend/src/customRootHttpRouterService.ts`:
+
+```typescript
+import { rootHttpRouterServiceFactory } from '@backstage/backend-app-api';
+import cookieParser from 'cookie-parser';
+import { authMiddlewareFactory } from './utils';
+
+  export default rootHttpRouterServiceFactory({
+~_  configure: ({ app, config, middleware, routes }) => {
+      app.use(middleware.helmet());
+      app.use(middleware.cors());
+      app.use(middleware.compression());
+      app.use(cookieParser());
+      app.use(middleware.logging());
+
+~_    app.use(authMiddlewareFactory({ config }));
+
+      // Simple handler to set auth cookie for user
+      app.use('/api/cookie', (_, res) => {
+        res.status(200).send();
+      });
+_
+      app.use(routes);
+
+_     app.use(middleware.notFound());
+      app.use(middleware.error());
+    },
+  });
+```
+
+## Frontend Setup
 
 Create `packages/app/src/cookieAuth.ts`:
 
